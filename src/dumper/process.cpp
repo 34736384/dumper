@@ -2,7 +2,7 @@
 #include "netvars.h"
 
 #define STRINGIFY(s)	#s
-
+std::vector<HMODULE> modules;
 std::unique_ptr<Process> process = std::make_unique<Process>();
 IBaseClientDLL* g_CHLClient = nullptr;
 
@@ -36,6 +36,7 @@ HRESULT CreateLink(LPCWSTR lpszPathObj, LPCSTR lpszPathLink, LPCWSTR lpszDesc)
 
 void Process::PreInit()
 {
+	system("pause");
 	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
 	CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
@@ -76,6 +77,7 @@ void Process::Init()
 				return LoadLibraryA(path.c_str());
 		};
 		auto handle = mod();
+		modules.push_back(handle);
 		std::string modName = path.erase(0, path.find_last_of('\\') + 1);
 		if (!handle)
 			return nullptr;
@@ -141,10 +143,10 @@ void Process::Signatures()
 	dwEntityList -= (uintptr_t)m_hPanorama;
 	printf_s("%-38s: 0x%p\n", STRINGIFY(dwEntityList), dwEntityList);
 
-	dwLocalPlayer = (uintptr_t)PatternScan(m_hPanorama, "A3 ? ? ? ? C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? 59 C3 6A ?");
-	dwLocalPlayer = *(uintptr_t*)(dwLocalPlayer + 1);
+	dwLocalPlayer = (uintptr_t)PatternScan(m_hPanorama, "8D 34 85 ? ? ? ? 89 15 ? ? ? ? 8B 41 08 8B 48 04 83 F9 FF");
+	dwLocalPlayer = *(uintptr_t*)(dwLocalPlayer + 3);
 	dwLocalPlayer -= (uintptr_t)m_hPanorama;
-	dwLocalPlayer += 16;
+	dwLocalPlayer += 4;
 	printf_s("%-38s: 0x%p\n", STRINGIFY(dwLocalPlayer), dwLocalPlayer);
 
 	dwClientState = (uintptr_t)PatternScan(m_hEngine, "A1 ? ? ? ? 33 D2 6A 00 6A 00 33 C9 89 B0");
@@ -269,6 +271,10 @@ void Process::Output()
 	timer->StopTimer();
 	std::cout << "Elapsed time: " << timer->GetElapsedTime() << "ms" << std::endl;
 	std::cout << std::setfill('=') << std::setw(50) << "" << std::endl;
+	system("pause");
+
+	for (auto& it : modules)
+		FreeLibrary(it);
 	system("pause");
 }
 
